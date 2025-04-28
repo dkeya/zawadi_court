@@ -18,6 +18,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Hide Default Streamlit Elements
+hide_streamlit_style = """
+    <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 # --- Data Loading Function ---
 @st.cache_data(ttl=3600)  # Cache data for 1 hour
 def load_data():
