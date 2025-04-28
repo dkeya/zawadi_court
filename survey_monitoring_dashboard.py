@@ -18,6 +18,37 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- Data Loading Function ---
+@st.cache_data(ttl=3600)  # Cache data for 1 hour
+def load_data():
+    """Load the survey data from the embedded dataset"""
+    try:
+        df = pd.read_excel('survey_data.xlsx')
+        
+        # Store total records count before any processing
+        total_records = len(df)
+        
+        # Replace submitdate with G01Q46 contents
+        df['submitdate'] = pd.to_datetime(df['G01Q46'], errors='coerce')
+        
+        # Remove comma separators from seed column if they exist
+        if 'seed' in df.columns:
+            df['seed'] = df['seed'].astype(str).str.replace(',', '')
+        
+        # Identify pesticide data columns
+        pest_cols = [col for col in df.columns if 'G03Q19' in col]
+        df = convert_pesticide_columns(df, pest_cols)
+        
+        # Preprocess data
+        df['G00Q01'] = df['G00Q01'].str.strip()
+        df['G00Q03'] = df['G00Q03'].str.strip()
+        
+        return df, total_records
+        
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+        return None, 0
+
 # --- Data Processing Functions ---
 def clean_numeric(value):
     """Convert various numeric formats to float, handling text entries"""
@@ -369,49 +400,11 @@ def main():
     st.title("🌾 Crop Protection Innovation Survey Dashboard")
     st.markdown("Monitoring the flow of crop protection innovation in low- and middle-income countries")
     
-    # File upload
-    uploaded_file = st.sidebar.file_uploader(
-        "Upload Survey Dataset", 
-        type=["xlsx", "xls", "csv"],
-        help="Upload the survey data file in Excel or CSV format"
-    )
+    # Load data
+    df, total_records = load_data()
     
-    if not uploaded_file:
-        st.info("Please upload a survey data file to begin analysis")
-        return
-    
-    # Load and process data
-    try:
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
-        
-        # Store total records count before any filtering
-        total_records = len(df)
-        
-        # Replace submitdate with G01Q46 contents
-        df['submitdate'] = pd.to_datetime(df['G01Q46'], errors='coerce')
-        
-        # Remove comma separators from seed column if they exist
-        if 'seed' in df.columns:
-            df['seed'] = df['seed'].astype(str).str.replace(',', '')
-        
-        # Identify pesticide data columns
-        pest_cols = [col for col in df.columns if 'G03Q19' in col]
-        df = convert_pesticide_columns(df, pest_cols)
-        
-        # Preprocess data
-        df['G00Q01'] = df['G00Q01'].str.strip()
-        df['G00Q03'] = df['G00Q03'].str.strip()
-        
-    except Exception as e:
-        st.error(f"Error loading file: {str(e)}")
-        return
-    
-    if df.empty:
-        st.error("No data loaded. Please check your file format.")
-        return
+    if df is None:
+        st.stop()
     
     # Sidebar filters - collapsed by default
     st.sidebar.title("Filters")
