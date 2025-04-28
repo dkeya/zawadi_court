@@ -122,9 +122,15 @@ def show_kpi_cards(df, total_records):
     valid_responses = len(df)
     invalid_responses = total_records - valid_responses
     
-    # Format the incomplete count in red and smaller font
-    incomplete_text = f'<span style="color: red; font-size: 1.2em;">({invalid_responses} incomplete)</span>'
-    col1.markdown(f"**Total Responses**<br>{valid_responses} {incomplete_text}", unsafe_allow_html=True)
+    # Display with red font for incomplete count
+    col1.markdown(f"""
+    <div style="border-radius:10px; padding:10px; background-color:#f0f2f6">
+        <h3 style="margin:0; padding:0">Total Responses</h3>
+        <p style="margin:0; padding:0; font-size:24px">
+            {valid_responses} <span style="color:red">({invalid_responses} incomplete)</span>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
     col2.metric("Countries Represented", df['G00Q01'].nunique())
     col3.metric("Regulators", len(df[df['G00Q03'] == "Regulator"]))
@@ -386,6 +392,10 @@ def main():
         
         # Replace submitdate with G01Q46 contents
         df['submitdate'] = pd.to_datetime(df['G01Q46'], errors='coerce')
+        
+        # Remove comma separators from seed column if they exist
+        if 'seed' in df.columns:
+            df['seed'] = df['seed'].astype(str).str.replace(',', '')
         
         # Identify pesticide data columns
         pest_cols = [col for col in df.columns if 'G03Q19' in col]
