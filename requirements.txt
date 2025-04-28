@@ -6,3 +6,4 @@ streamlit-aggrid
 geopandas
 plotly
 openpyxl
+WordCloud
