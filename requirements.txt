@@ -1,0 +1,8 @@
+streamlit >= 1.40.1
+pandas>=2.0
+matplotlib
+numpy>=1.26.0
+streamlit-aggrid
+geopandas
+plotly
+openpyxl
