@@ -24,6 +24,9 @@ hide_streamlit_style = """
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
+        .stSlider [data-baseweb="slider"] {
+            padding: 0;
+        }
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -416,7 +419,7 @@ def main():
     if df is None:
         st.stop()
     
-    # Sidebar filters - collapsed by default
+    # Sidebar filters
     st.sidebar.title("Filters")
     
     with st.sidebar.expander("Select Countries", expanded=False):
@@ -435,23 +438,53 @@ def main():
             label_visibility="collapsed"
         )
     
-    min_date = df['submitdate'].min().date() if not df['submitdate'].isna().all() else datetime.today().date()
-    max_date = df['submitdate'].max().date() if not df['submitdate'].isna().all() else datetime.today().date()
-    
-    date_range = st.sidebar.date_input(
-        "Select Date Range",
-        value=[min_date, max_date],
-        min_value=min_date,
-        max_value=max_date
-    )
+    # Date range selection - clean and compact
+    if not df['submitdate'].isna().all():
+        min_date = df['submitdate'].min().date()
+        max_date = max(df['submitdate'].max().date(), datetime.today().date())
+        
+        st.sidebar.markdown("**Select Date Range**")
+        
+        # Create a clean date range selector
+        col1, col2 = st.sidebar.columns([1, 3])
+        with col1:
+            st.markdown("From:")
+        with col2:
+            start_date = st.date_input(
+                "Start date",
+                value=min_date,
+                min_value=min_date,
+                max_value=max_date,
+                label_visibility="collapsed"
+            )
+        
+        col1, col2 = st.sidebar.columns([1, 3])
+        with col1:
+            st.markdown("To:")
+        with col2:
+            end_date = st.date_input(
+                "End date",
+                value=max_date,
+                min_value=min_date,
+                max_value=max_date,
+                label_visibility="collapsed"
+            )
+    else:
+        today = datetime.today().date()
+        start_date = end_date = today
     
     # Apply filters
     filtered_df = df[
         (df['G00Q01'].isin(selected_countries)) &
-        (df['G00Q03'].isin(selected_stakeholders)) &
-        (df['submitdate'].dt.date >= date_range[0]) &
-        (df['submitdate'].dt.date <= date_range[1])
+        (df['G00Q03'].isin(selected_stakeholders))
     ].copy()
+    
+    # Apply date filter if we have dates
+    if not df['submitdate'].isna().all():
+        filtered_df = filtered_df[
+            (filtered_df['submitdate'].dt.date >= start_date) &
+            (filtered_df['submitdate'].dt.date <= end_date)
+        ]
     
     if filtered_df.empty:
         st.warning("No data matches the selected filters")
@@ -472,7 +505,7 @@ def main():
     show_text_analysis(filtered_df, "Key Recommendations", 
                       ['G00Q42', 'G00Q43', 'G00Q44', 'G00Q45'])
     
-    # Data explorer - show submitdate (from G01Q46) and exclude lastpage/startlanguage/G01Q46
+    # Data explorer
     st.subheader("Data Explorer")
     if st.checkbox("Show raw data"):
         cols_to_show = [col for col in filtered_df.columns 
