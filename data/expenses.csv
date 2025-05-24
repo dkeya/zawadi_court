@@ -1,0 +1,13 @@
+Date,Category,Description,Vendor,Amount (KES),Mode,Remarks,Receipt
+2025-01-01,Personnel Costs,Security Salaries,John Cheruiyot,15000.0,mpesa,Paid,TBP
+2025-01-01,Personnel Costs,Security Locum,Paul Kilel,15000.0,mpesa,Paid,TBP
+2025-01-01,Utilities,Electricity,KPLC,4000.0,mpesa,Paid,TBP
+2025-01-01,Utilities,Water,Easy Water,570.0,mpesa,Paid,TBP
+2025-01-01,Maintenance & Repairs, Lawn Mowing ,John Cheruiyot,5400.0,mpesa,Paid,TBP
+2025-01-01,Miscellaneous,Miscellaneous,Others,3000.0,mpesa,Paid,TBP
+2025-02-01,Personnel Costs,Security Salaries,John Cheruiyot,15000.0,mpesa,Paid,TBP
+2025-02-01,Personnel Costs,Security Locum,Paul Kilel,15000.0,mpesa,Paid,TBP
+2025-02-01,Utilities,Electricity,KPLC,3000.0,mpesa,Paid,TBP
+2025-02-01,Utilities,Water,Easy Water,1000.0,mpesa,Paid,TBP
+2025-02-01,Maintenance & Repairs, Lawn Mowing ,John Cheruiyot,0.0,mpesa,Paid,TBP
+2025-02-01,Miscellaneous,Miscellaneous,Others,6000.0,mpesa,Paid,TBP

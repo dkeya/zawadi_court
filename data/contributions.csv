@@ -1,0 +1,75 @@
+House No,Family Name,Lane,Cumulative Debt (2024 & Prior),JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC,YTD,Current Debt,Remarks,Residency Status,Status
+1,Samuel Omondi,ROYAL,55000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,65000.0,nan,Resident,🔴 >2 months behind
+2,Edward Musau,ROYAL,23000.0,0.0,0.0,8000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,8000.0,25000.0,nan,Resident,🔴 >2 months behind
+3,David Mureithi,ROYAL,90000.0,0.0,5000.0,5000.0,5000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,15000.0,85000.0,nan,Resident,🟠 1-2 months behind
+5,John Omagwa,ROYAL,2000.0,0.0,8000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,8000.0,4000.0,nan,Resident,🔴 >2 months behind
+6,Richard Motogwa,ROYAL,158400.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,168400.0,nan,Resident,🔴 >2 months behind
+7,Grace Wakaba,ROYAL,0.0,2000.0,2000.0,2000.0,2000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,8000.0,2000.0,nan,Resident,🟠 1-2 months behind
+8,Elizabeth Karanja,ROYAL,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+9,Muraya,ROYAL,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+10,Anne Kahihia,ROYAL,97500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,107500.0,nan,Resident,🔴 >2 months behind
+11,Peter Kanda,ROYAL,22000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,32000.0,nan,Resident,🔴 >2 months behind
+12,Daniel Kyende/Jane Ndolo,ROYAL,2000.0,2000.0,2000.0,2000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6000.0,6000.0,nan,Resident,🟠 1-2 months behind
+13,Benjamin Muema,ROYAL,17000.0,0.0,4000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,4000.0,23000.0,nan,Resident,🔴 >2 months behind
+15,Shaban Ramadhan,ROYAL,47500.0,3000.0,3000.0,3000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,9000.0,48500.0,nan,Resident,🟠 1-2 months behind
+16,Vacant ,ROYAL,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+17,Samson Karanja,ROYAL,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10000.0,nan,Resident,🔴 >2 months behind
+19,Stephen Kamau,ROYAL,100000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,110000.0,nan,Resident,🔴 >2 months behind
+20,Stephen Tanui,ROYAL,200000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,210000.0,nan,Resident,🔴 >2 months behind
+21,William Ojow,SHUJAA,110000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,120000.0,nan,Resident,🔴 >2 months behind
+22,Vacant ,SHUJAA,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Non-Resident,🔴 >2 months behind
+23,Vacant ,SHUJAA,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Non-Resident,🔴 >2 months behind
+24,Joshua Oliech,SHUJAA,21000.0,0.0,0.0,5000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5000.0,26000.0,nan,Resident,🔴 >2 months behind
+25,Chacha Gabriel,SHUJAA,2000.0,2000.0,4000.0,2000.0,2000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10000.0,2000.0,nan,Resident,🟠 1-2 months behind
+26,John Khambo,SHUJAA,4000.0,10000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10000.0,4000.0,nan,Resident,🔴 >2 months behind
+27,Andrew Mutune,SHUJAA,19000.0,0.0,3000.0,3000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6000.0,23000.0,nan,Resident,🔴 >2 months behind
+28,Jerusha Momanyi,SHUJAA,6000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,16000.0,nan,Resident,🔴 >2 months behind
+29,Vacant ,SHUJAA,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+30,Adams Cheptorus,SHUJAA,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+31,Mwakida Gervasi Ngati,SHUJAA,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+32,Nicholas Mweu,SHUJAA,4000.0,0.0,8000.0,2000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10000.0,4000.0,nan,Resident,🔴 >2 months behind
+33,Patrick Kahora,SHUJAA,-3000.0,0.0,0.0,10000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10000.0,-3000.0,nan,Resident,🔴 >2 months behind
+34,Vacant ,SHUJAA,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+35,Josphat Kungu,SHUJAA,118500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,128500.0,nan,Resident,🔴 >2 months behind
+035A,Tenant1 - Winnie,SHUJAA,1500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,2000.0,9500.0,nan,Resident,🟠 1-2 months behind
+035B,Tenant2 - Lilian),SHUJAA,1500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,2000.0,9500.0,nan,Resident,🟠 1-2 months behind
+035C,Tenant3 - Hosea,SHUJAA,1000.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,2000.0,9000.0,nan,Resident,🟠 1-2 months behind
+035D,Tenant4- Ziporrah,SHUJAA,2500.0,500.0,500.0,500.0,500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,2000.0,10500.0,nan,Resident,🟠 1-2 months behind
+36,Jackton Amayo,SHUJAA,26000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,36000.0,nan,Resident,🔴 >2 months behind
+37,Hilary Chepkwony,SHUJAA,98000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,108000.0,nan,Resident,🔴 >2 months behind
+037A,Tenant - Shop/Kiprono,SHUJAA,0.0,1000.0,1000.0,1000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3000.0,7000.0,nan,Resident,🟠 1-2 months behind
+39,Nick Odhiambo,WEMA,4000.0,0.0,30000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,30000.0,-16000.0,nan,Resident,🔴 >2 months behind
+40,Michael & Mercy,WEMA,5000.0,0.0,2000.0,4000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6000.0,9000.0,nan,Resident,🔴 >2 months behind
+41,David Kasyoki,WEMA,59000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,69000.0,nan,Resident,🔴 >2 months behind
+42,Mutuma Nkanata,WEMA,3000.0,0.0,4000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,4000.0,9000.0,nan,Resident,🔴 >2 months behind
+43,Eng Mweu,WEMA,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10000.0,nan,Resident,🔴 >2 months behind
+44,Wafula,WEMA,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+47,Bob Kivuva,WEMA,10000.0,2000.0,2000.0,0.0,4000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,8000.0,12000.0,nan,Resident,🟠 1-2 months behind
+48,Mrs. Olang,WEMA,129000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,139000.0,nan,Resident,🔴 >2 months behind
+49,Martin Muhindi,WEMA,15000.0,6000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6000.0,19000.0,nan,Resident,🔴 >2 months behind
+50,Andrew Ngure,WEMA,5000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,15000.0,nan,Resident,🔴 >2 months behind
+52,Kenneth Odire,WEMA,28000.0,0.0,0.0,50000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,50000.0,-12000.0,nan,Resident,🔴 >2 months behind
+53,Stella Atela,WEMA,-4000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6000.0,nan,Resident,🔴 >2 months behind
+053A,Tenant1,WEMA,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+053B,Tenant2,WEMA,12000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,22000.0,nan,Resident,🔴 >2 months behind
+55,Seline Taabu,WEMA,16000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,26000.0,nan,Resident,🔴 >2 months behind
+56,David Keya,WEMA,27000.0,2000.0,2000.0,2000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,6000.0,31000.0,nan,Resident,🟠 1-2 months behind
+57,Peter Mwangi,WEMA,88000.0,0.0,5000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5000.0,93000.0,nan,Resident,🔴 >2 months behind
+58,Benard Ayieko,KINGS,10000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,20000.0,nan,Resident,🔴 >2 months behind
+59,Gilbert Mogire,KINGS,32400.0,0.0,30000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,30000.0,12400.0,nan,Resident,🔴 >2 months behind
+61,Abel Stephens Dome,KINGS,128000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,138000.0,nan,Resident,🔴 >2 months behind
+62,Boniface Kioko,KINGS,-14000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-4000.0,nan,Resident,🔴 >2 months behind
+062A,Tenant (Nelly),KINGS,10000.0,1000.0,1000.0,1000.0,1000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,4000.0,16000.0,nan,Resident,🟠 1-2 months behind
+63,Sam Otieno,KINGS,64000.0,0.0,10000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10000.0,64000.0,nan,Resident,🔴 >2 months behind
+64,Kenneth Mwakudia,KINGS,1000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,11000.0,nan,Resident,🔴 >2 months behind
+65,Marjorie Kimani,KINGS,84000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,94000.0,nan,Resident,🔴 >2 months behind
+66,Jared Osiago Mogaka,KINGS,14000.0,14000.0,24000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,38000.0,-14000.0,nan,Resident,🔴 >2 months behind
+67,Arthur Omuse,KINGS,2000.0,2000.0,2000.0,4000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,8000.0,4000.0,nan,Resident,🟠 1-2 months behind
+68,Joseph Nzioki,KINGS,20000.0,5000.0,0.0,0.0,5000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10000.0,20000.0,nan,Resident,🔴 >2 months behind
+69,Samson Obwong',KINGS,32000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,42000.0,nan,Resident,🔴 >2 months behind
+70,Jared Nevaton,KINGS,4000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,14000.0,nan,Resident,🔴 >2 months behind
+74,Lawrence Kaigi,KINGS,154000.0,0.0,4000.0,0.0,5000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,9000.0,155000.0,nan,Resident,🔴 >2 months behind
+75,Edward Makori,KINGS,66000.0,5000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5000.0,71000.0,nan,Resident,🔴 >2 months behind
+76,Joshua Mwendwa,KINGS,100500.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,110500.0,nan,Resident,🔴 >2 months behind
+076A,Tenant (Ben Bakari),KINGS,0.0,0.0,1000.0,1000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,2000.0,8000.0,nan,Resident,🔴 >2 months behind
+77,Salim Saad,KINGS,0.0,1000.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1000.0,9000.0,nan,Resident,🔴 >2 months behind
