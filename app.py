@@ -19,7 +19,7 @@ LANES = ['ROYAL', 'SHUJAA', 'WEMA', 'KINGS']
 MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 EXPENSE_CATEGORIES = ['Personnel', 'Utilities', 'Maintenance', 'Miscellaneous']
 SOCIAL_TYPES = ['Celebration', 'Emergency', 'Welfare']
-DEFAULT_RATES = {'Standard Resident': 2000, 'Standard Non-Resident': 1000, 'Special Rate': 500}
+DEFAULT_RATES = {'Resident': 2000, 'Non-Resident': 1000, 'Special Rate': 500}
 
 def safe_convert_to_float(value):
     """Safely convert various string formats to float"""
