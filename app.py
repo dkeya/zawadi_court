@@ -131,7 +131,7 @@ def check_treasurer_password():
         st.session_state.treasurer_authenticated = False
 
     if not st.session_state.treasurer_authenticated:
-        password = st.sidebar.text_input("Treasurer Login:", type="password", key="treasurer_pw")
+        password = st.sidebar.text_input("Enter Treasurer Password:", type="password", key="treasurer_pw")
         if password:
             if password == TREASURER_PASSWORD:
                 st.session_state.treasurer_authenticated = True
@@ -417,38 +417,47 @@ def expense_tracker(data):
             
             if not pending_requests.empty:
                 st.write("Pending Approval:")
-                edited_requests = st.data_editor(
-                    pending_requests,
-                    column_config={
-                        "Amount (KES)": st.column_config.NumberColumn("Amount (KES)", format="%d"),
-                        "Status": st.column_config.SelectboxColumn(
-                            "Status",
-                            options=["Pending Approval", "Approved", "Rejected"],
-                            required=True
-                        )
-                    },
-                    use_container_width=True,
-                    hide_index=True,
-                    key="expense_requests_editor"
-                )
                 
-                if st.button("💾 Update Requisition Status"):
-                    data['expense_requests'].loc[edited_requests.index] = edited_requests
+                # Add checkboxes for each request
+                selected_requests = []
+                for idx, request in pending_requests.iterrows():
+                    cols = st.columns([1, 10])
+                    with cols[0]:
+                        selected = st.checkbox(f"Select #{idx}", key=f"req_select_{idx}")
+                    with cols[1]:
+                        st.write(f"**{request['Description']}** - KES {request['Amount (KES)']:,.2f}")
+                        st.caption(f"Requested by: {request['Requested By']} | Category: {request['Category']}")
+                        st.caption(f"Remarks: {request['Remarks']}")
                     
-                    # If any were approved, add them to expenses
-                    approved_requests = edited_requests[edited_requests['Status'] == 'Approved']
-                    if not approved_requests.empty:
-                        new_expenses = approved_requests[['Date', 'Description', 'Category', 'Amount (KES)']].copy()
-                        new_expenses['Vendor'] = approved_requests['Requested By']
-                        new_expenses['Mode'] = "To be determined"
-                        new_expenses['Remarks'] = "Approved from requisition: " + approved_requests['Remarks']
-                        new_expenses['Receipt'] = None
+                    if selected:
+                        selected_requests.append(idx)
+                
+                if selected_requests:
+                    action = st.selectbox("Action for selected requests", ["Approve", "Reject"])
+                    remarks = st.text_area("Approval Remarks", "Approved by treasurer")
+                    
+                    if st.button("💾 Apply Action"):
+                        for idx in selected_requests:
+                            data['expense_requests'].at[idx, 'Status'] = action
+                            data['expense_requests'].at[idx, 'Remarks'] = f"{remarks} - {data['expense_requests'].at[idx, 'Remarks']}"
+                            
+                            # If approved, add to expenses
+                            if action == "Approve":
+                                new_expense = {
+                                    'Date': data['expense_requests'].at[idx, 'Date'],
+                                    'Description': data['expense_requests'].at[idx, 'Description'],
+                                    'Category': data['expense_requests'].at[idx, 'Category'],
+                                    'Vendor': data['expense_requests'].at[idx, 'Requested By'],
+                                    'Amount (KES)': data['expense_requests'].at[idx, 'Amount (KES)'],
+                                    'Mode': "To be determined",
+                                    'Remarks': f"Approved from requisition: {data['expense_requests'].at[idx, 'Remarks']}",
+                                    'Receipt': None
+                                }
+                                data['expenses'] = pd.concat([data['expenses'], pd.DataFrame([new_expense])], ignore_index=True)
                         
-                        data['expenses'] = pd.concat([data['expenses'], new_expenses], ignore_index=True)
-                    
-                    save_data(data)
-                    st.success("Requisition status updated successfully!")
-                    st.rerun()
+                        save_data(data)
+                        st.success(f"{len(selected_requests)} requests {action.lower()}ed successfully!")
+                        st.rerun()
             else:
                 st.info("No pending expense requisitions")
     else:
@@ -795,12 +804,26 @@ def reports(data):
         )
         st.plotly_chart(fig, use_container_width=True)
         
-        # Monthly Contribution Trend - New addition
+        # Combined Monthly Trend - New addition
         monthly_contrib = data['contributions'][MONTHS].apply(pd.to_numeric, errors='coerce').sum()
+        monthly_expenses = data['expenses'].copy()
+        monthly_expenses['Month'] = pd.to_datetime(monthly_expenses['Date']).dt.strftime('%b').str.upper()
+        monthly_exp_totals = monthly_expenses.groupby('Month')['Amount (KES)'].sum().reindex(MONTHS, fill_value=0)
+        
+        # Create combined dataframe
+        combined_df = pd.DataFrame({
+            'Month': MONTHS,
+            'Contributions': monthly_contrib,
+            'Expenses': monthly_exp_totals
+        }).melt(id_vars='Month', var_name='Type', value_name='Amount')
+        
         fig = px.line(
-            monthly_contrib,
-            title="Monthly Contribution Trend",
-            labels={'value': 'Amount (KES)', 'index': 'Month'},
+            combined_df,
+            x='Month',
+            y='Amount',
+            color='Type',
+            title="Monthly Contribution vs Expense Trend",
+            labels={'Amount': 'Amount (KES)', 'Month': 'Month'},
             markers=True
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -821,14 +844,26 @@ def reports(data):
         )
         st.plotly_chart(fig, use_container_width=True)
         
-        # Monthly Expense Trend - New addition
+        # Combined Monthly Trend - New addition
+        monthly_contrib = data['contributions'][MONTHS].apply(pd.to_numeric, errors='coerce').sum()
         monthly_expenses = data['expenses'].copy()
         monthly_expenses['Month'] = pd.to_datetime(monthly_expenses['Date']).dt.strftime('%b').str.upper()
-        monthly_totals = monthly_expenses.groupby('Month')['Amount (KES)'].sum().reindex(MONTHS, fill_value=0)
+        monthly_exp_totals = monthly_expenses.groupby('Month')['Amount (KES)'].sum().reindex(MONTHS, fill_value=0)
+        
+        # Create combined dataframe
+        combined_df = pd.DataFrame({
+            'Month': MONTHS,
+            'Contributions': monthly_contrib,
+            'Expenses': monthly_exp_totals
+        }).melt(id_vars='Month', var_name='Type', value_name='Amount')
+        
         fig = px.line(
-            monthly_totals, 
-            title="Monthly Expense Trend",
-            labels={'value': 'Amount (KES)', 'index': 'Month'},
+            combined_df,
+            x='Month',
+            y='Amount',
+            color='Type',
+            title="Monthly Contribution vs Expense Trend",
+            labels={'Amount': 'Amount (KES)', 'Month': 'Month'},
             markers=True
         )
         st.plotly_chart(fig, use_container_width=True)
