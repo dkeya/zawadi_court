@@ -20,6 +20,7 @@ MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 
 EXPENSE_CATEGORIES = ['Personnel', 'Utilities', 'Maintenance', 'Miscellaneous']
 SOCIAL_TYPES = ['Celebration', 'Emergency', 'Welfare']
 DEFAULT_RATES = {'Resident': 2000, 'Non-Resident': 1000, 'Special Rate': 500}
+TREASURER_PASSWORD = "zawadi01*"
 
 def safe_convert_to_float(value):
     """Safely convert various string formats to float"""
@@ -36,7 +37,8 @@ def load_data():
         'contributions': 'data/contributions.csv',
         'expenses': 'data/expenses.csv',
         'social': 'data/social.csv',
-        'rates': 'data/rates.csv'
+        'rates': 'data/rates.csv',
+        'expense_requests': 'data/expense_requests.csv'
     }
     
     os.makedirs('data', exist_ok=True)
@@ -56,7 +58,7 @@ def load_data():
                 if 'Remarks' in df.columns:
                     df['Remarks'] = df['Remarks'].astype(str)
                 if 'Rate Category' not in df.columns:
-                    df['Rate Category'] = 'Standard Resident'
+                    df['Rate Category'] = 'Resident'
                 data[name] = df
             elif name == 'rates':
                 try:
@@ -88,6 +90,13 @@ def load_data():
                 if 'Amount' in df.columns:
                     df['Amount'] = df['Amount'].apply(safe_convert_to_float)
                 data[name] = df
+            elif name == 'expense_requests':
+                df = pd.read_csv(file)
+                if 'Date' in df.columns:
+                    df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
+                if 'Amount (KES)' in df.columns:
+                    df['Amount (KES)'] = df['Amount (KES)'].apply(safe_convert_to_float)
+                data[name] = df
                     
         except FileNotFoundError:
             if name == 'contributions':
@@ -105,6 +114,9 @@ def load_data():
                     'Rate Category': list(DEFAULT_RATES.keys()),
                     'Amount': list(DEFAULT_RATES.values())
                 })
+            elif name == 'expense_requests':
+                columns = ['Date', 'Description', 'Category', 'Requested By', 'Amount (KES)', 'Status', 'Remarks']
+                data[name] = pd.DataFrame(columns=columns)
     
     return data
 
@@ -113,19 +125,16 @@ def save_data(data):
     for name, df in data.items():
         df.to_csv(f'data/{name}.csv', index=False)
 
-def check_password():
-    """Password authentication using only the fallback password"""
-    DEFAULT_PASSWORD = "admin123"
-    DEFAULT_HASH = hashlib.sha256(DEFAULT_PASSWORD.encode()).hexdigest()
+def check_treasurer_password():
+    """Check if user has entered the treasurer password"""
+    if 'treasurer_authenticated' not in st.session_state:
+        st.session_state.treasurer_authenticated = False
 
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-
-    if not st.session_state.authenticated:
-        password = st.sidebar.text_input("Enter Admin Password:", type="password")
+    if not st.session_state.treasurer_authenticated:
+        password = st.sidebar.text_input("Treasurer Login:", type="password", key="treasurer_pw")
         if password:
-            if hashlib.sha256(password.encode()).hexdigest() == DEFAULT_HASH:
-                st.session_state.authenticated = True
+            if password == TREASURER_PASSWORD:
+                st.session_state.treasurer_authenticated = True
                 st.rerun()
             else:
                 st.sidebar.error("Incorrect password")
@@ -138,6 +147,10 @@ def get_current_month():
 
 def residency_management(data):
     """Manage residency rates and categories"""
+    if not check_treasurer_password():
+        st.warning("Please enter the treasurer password to access this section")
+        return
+        
     with st.expander("🏘️ Residency Rate Management", expanded=False):
         st.write("Configure monthly contribution rates for different resident categories")
         
@@ -192,9 +205,9 @@ def residency_management(data):
 def calculate_monthly_rate(row, rates_df):
     """Get the monthly rate for a household"""
     if 'Rate Category' not in row or pd.isna(row['Rate Category']):
-        return DEFAULT_RATES['Standard Resident']
+        return DEFAULT_RATES['Resident']
     rate = rates_df[rates_df['Rate Category'] == row['Rate Category']]['Amount']
-    return rate.values[0] if not rate.empty else DEFAULT_RATES['Standard Resident']
+    return rate.values[0] if not rate.empty else DEFAULT_RATES['Resident']
 
 def calculate_liability(row, current_month, rates_df):
     """Calculate additional liability based on rate category and months elapsed"""
@@ -251,19 +264,24 @@ def contributions_dashboard(data):
         lambda row: get_payment_status(row, current_month), axis=1
     )
     
-    # Filters
-    col1, col2, col3 = st.columns(3)
+    # Filters - Added Family Name filter first as requested
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        lane_filter = st.selectbox("Filter by Lane", ["All"] + LANES)
+        family_filter = st.selectbox("Filter by Family Name", 
+                                    ["All"] + sorted(data['contributions']['Family Name'].unique().tolist()))
     with col2:
+        lane_filter = st.selectbox("Filter by Lane", ["All"] + LANES)
+    with col3:
         status_filter = st.selectbox("Filter by Status", 
                                    ["All", "🟢 Up-to-date", "🟠 1-2 months behind", "🔴 >2 months behind"])
-    with col3:
+    with col4:
         rate_options = ["All"] + list(data['rates']['Rate Category'].unique())
         rate_filter = st.selectbox("Filter by Rate Category", rate_options)
     
     # Apply filters
     filtered_df = data['contributions'].copy()
+    if family_filter != "All":
+        filtered_df = filtered_df[filtered_df['Family Name'] == family_filter]
     if lane_filter != "All":
         filtered_df = filtered_df[filtered_df['Lane'] == lane_filter]
     if status_filter != "All":
@@ -279,31 +297,40 @@ def contributions_dashboard(data):
     editable_cols = ['House No', 'Family Name', 'Lane', 'Rate Category', 
                     'Cumulative Debt (2024 & Prior)'] + months_to_show + ['Remarks']
     
-    edited_df = st.data_editor(
-        filtered_df[editable_cols + ['YTD', 'Current Debt', 'Status']],
-        column_config={
-            "Status": st.column_config.SelectboxColumn(
-                "Status",
-                options=["🟢 Up-to-date", "🟠 1-2 months behind", "🔴 >2 months behind"],
-                required=True
-            ),
-            "Rate Category": st.column_config.SelectboxColumn(
-                "Rate Category",
-                options=list(data['rates']['Rate Category'].unique()),
-                required=True
-            ),
-            **{col: st.column_config.NumberColumn(format="%d") for col in months_to_show + ['YTD', 'Current Debt', 'Cumulative Debt (2024 & Prior)']}
-        },
-        use_container_width=True,
-        num_rows="dynamic",
-        key="contributions_editor"
-    )
-    
-    if st.button("💾 Save Changes"):
-        for col in editable_cols:
-            data['contributions'].loc[edited_df.index, col] = edited_df[col]
-        save_data(data)
-        st.success("Changes saved successfully!")
+    # Only allow editing if treasurer is authenticated
+    if st.session_state.get('treasurer_authenticated', False):
+        edited_df = st.data_editor(
+            filtered_df[editable_cols + ['YTD', 'Current Debt', 'Status']],
+            column_config={
+                "Status": st.column_config.SelectboxColumn(
+                    "Status",
+                    options=["🟢 Up-to-date", "🟠 1-2 months behind", "🔴 >2 months behind"],
+                    required=True
+                ),
+                "Rate Category": st.column_config.SelectboxColumn(
+                    "Rate Category",
+                    options=list(data['rates']['Rate Category'].unique()),
+                    required=True
+                ),
+                **{col: st.column_config.NumberColumn(format="%d") for col in months_to_show + ['YTD', 'Current Debt', 'Cumulative Debt (2024 & Prior)']}
+            },
+            use_container_width=True,
+            num_rows="dynamic",
+            key="contributions_editor"
+        )
+        
+        if st.button("💾 Save Changes"):
+            for col in editable_cols:
+                data['contributions'].loc[edited_df.index, col] = edited_df[col]
+            save_data(data)
+            st.success("Changes saved successfully!")
+    else:
+        st.dataframe(
+            filtered_df[editable_cols + ['YTD', 'Current Debt', 'Status']],
+            use_container_width=True,
+            hide_index=True
+        )
+        st.info("🔒 Enter treasurer password in sidebar to edit data")
     
     # Visualizations
     st.subheader("📈 Contributions Analysis")
@@ -353,6 +380,80 @@ def contributions_dashboard(data):
 def expense_tracker(data):
     st.header("💸 Expense Tracker")
     
+    # Expense Requisition Section - New addition
+    with st.expander("📝 Submit Expense Requisition", expanded=False):
+        with st.form("expense_requisition_form"):
+            cols = st.columns(2)
+            with cols[0]:
+                req_date = st.date_input("Date", datetime.now())
+                req_category = st.selectbox("Category", EXPENSE_CATEGORIES)
+            with cols[1]:
+                req_amount = st.number_input("Amount (KES)", min_value=0)
+                req_name = st.text_input("Requested By")
+            
+            req_description = st.text_input("Description")
+            req_remarks = st.text_area("Remarks")
+            
+            if st.form_submit_button("Submit Requisition"):
+                new_request = {
+                    'Date': req_date.strftime('%Y-%m-%d'),
+                    'Category': req_category,
+                    'Description': req_description,
+                    'Requested By': req_name,
+                    'Amount (KES)': req_amount,
+                    'Status': 'Pending Approval',
+                    'Remarks': req_remarks
+                }
+                
+                data['expense_requests'] = pd.concat([data['expense_requests'], pd.DataFrame([new_request])], ignore_index=True)
+                save_data(data)
+                st.success("Expense requisition submitted for approval!")
+                st.rerun()
+    
+    # Approve Expense Requisitions - New addition
+    if st.session_state.get('treasurer_authenticated', False):
+        with st.expander("🛂 Approve Expense Requisitions", expanded=False):
+            pending_requests = data['expense_requests'][data['expense_requests']['Status'] == 'Pending Approval']
+            
+            if not pending_requests.empty:
+                st.write("Pending Approval:")
+                edited_requests = st.data_editor(
+                    pending_requests,
+                    column_config={
+                        "Amount (KES)": st.column_config.NumberColumn("Amount (KES)", format="%d"),
+                        "Status": st.column_config.SelectboxColumn(
+                            "Status",
+                            options=["Pending Approval", "Approved", "Rejected"],
+                            required=True
+                        )
+                    },
+                    use_container_width=True,
+                    hide_index=True,
+                    key="expense_requests_editor"
+                )
+                
+                if st.button("💾 Update Requisition Status"):
+                    data['expense_requests'].loc[edited_requests.index] = edited_requests
+                    
+                    # If any were approved, add them to expenses
+                    approved_requests = edited_requests[edited_requests['Status'] == 'Approved']
+                    if not approved_requests.empty:
+                        new_expenses = approved_requests[['Date', 'Description', 'Category', 'Amount (KES)']].copy()
+                        new_expenses['Vendor'] = approved_requests['Requested By']
+                        new_expenses['Mode'] = "To be determined"
+                        new_expenses['Remarks'] = "Approved from requisition: " + approved_requests['Remarks']
+                        new_expenses['Receipt'] = None
+                        
+                        data['expenses'] = pd.concat([data['expenses'], new_expenses], ignore_index=True)
+                    
+                    save_data(data)
+                    st.success("Requisition status updated successfully!")
+                    st.rerun()
+            else:
+                st.info("No pending expense requisitions")
+    else:
+        st.info("🔒 Treasurer access required to approve expense requisitions")
+    
     # Cash balance section
     st.subheader("💰 Cash Flow Management")
     cash_cols = st.columns(3)
@@ -386,43 +487,46 @@ def expense_tracker(data):
     </div>
     """, unsafe_allow_html=True)
     
-    # Add new expense form
-    with st.expander("➕ Add New Expense", expanded=False):
-        with st.form("expense_form"):
-            cols = st.columns(2)
-            with cols[0]:
-                expense_date = st.date_input("Date", datetime.now())
-                expense_category = st.selectbox("Category", EXPENSE_CATEGORIES)
-            with cols[1]:
-                expense_amount = st.number_input("Amount (KES)", min_value=0)
-                expense_mode = st.selectbox("Payment Mode", ["Cash", "MPesa", "Bank Transfer"])
-            
-            expense_description = st.text_input("Description")
-            expense_vendor = st.text_input("Vendor")
-            expense_remarks = st.text_area("Remarks")
-            expense_receipt = st.file_uploader("Upload Receipt (optional)", type=['png', 'jpg', 'pdf'])
-            
-            if st.form_submit_button("Add Expense"):
-                new_expense = {
-                    'Date': expense_date.strftime('%Y-%m-%d'),
-                    'Category': expense_category,
-                    'Description': expense_description,
-                    'Vendor': expense_vendor,
-                    'Amount (KES)': expense_amount,
-                    'Mode': expense_mode,
-                    'Remarks': expense_remarks,
-                    'Receipt': expense_receipt.name if expense_receipt else None
-                }
+    # Add new expense form - Only for treasurer
+    if st.session_state.get('treasurer_authenticated', False):
+        with st.expander("➕ Add New Expense", expanded=False):
+            with st.form("expense_form"):
+                cols = st.columns(2)
+                with cols[0]:
+                    expense_date = st.date_input("Date", datetime.now())
+                    expense_category = st.selectbox("Category", EXPENSE_CATEGORIES)
+                with cols[1]:
+                    expense_amount = st.number_input("Amount (KES)", min_value=0)
+                    expense_mode = st.selectbox("Payment Mode", ["Cash", "MPesa", "Bank Transfer"])
                 
-                if expense_receipt:
-                    os.makedirs('receipts', exist_ok=True)
-                    with open(f"receipts/{expense_receipt.name}", "wb") as f:
-                        f.write(expense_receipt.getbuffer())
+                expense_description = st.text_input("Description")
+                expense_vendor = st.text_input("Vendor")
+                expense_remarks = st.text_area("Remarks")
+                expense_receipt = st.file_uploader("Upload Receipt (optional)", type=['png', 'jpg', 'pdf'])
                 
-                data['expenses'] = pd.concat([data['expenses'], pd.DataFrame([new_expense])], ignore_index=True)
-                save_data(data)
-                st.success("Expense added successfully!")
-                st.rerun()
+                if st.form_submit_button("Add Expense"):
+                    new_expense = {
+                        'Date': expense_date.strftime('%Y-%m-%d'),
+                        'Category': expense_category,
+                        'Description': expense_description,
+                        'Vendor': expense_vendor,
+                        'Amount (KES)': expense_amount,
+                        'Mode': expense_mode,
+                        'Remarks': expense_remarks,
+                        'Receipt': expense_receipt.name if expense_receipt else None
+                    }
+                    
+                    if expense_receipt:
+                        os.makedirs('receipts', exist_ok=True)
+                        with open(f"receipts/{expense_receipt.name}", "wb") as f:
+                            f.write(expense_receipt.getbuffer())
+                    
+                    data['expenses'] = pd.concat([data['expenses'], pd.DataFrame([new_expense])], ignore_index=True)
+                    save_data(data)
+                    st.success("Expense added successfully!")
+                    st.rerun()
+    else:
+        st.info("🔒 Treasurer access required to add expenses directly. Please submit a requisition above.")
     
     # Expense records
     st.subheader("📝 Expense Records")
@@ -443,35 +547,42 @@ def expense_tracker(data):
     if category_filter != "All":
         filtered_expenses = filtered_expenses[filtered_expenses['Category'] == category_filter]
     
-    # Display editable table
-    edited_expenses = st.data_editor(
-        filtered_expenses,
-        column_config={
-            "Amount (KES)": st.column_config.NumberColumn(
-                "Amount (KES)", 
-                format="%d",
-                min_value=0
-            ),
-            "Date": st.column_config.TextColumn(
-                "Date (YYYY-MM-DD)"
-            ),
-            "Category": st.column_config.SelectboxColumn(
-                "Category",
-                options=EXPENSE_CATEGORIES
-            )
-        },
-        use_container_width=True,
-        num_rows="dynamic",
-        key="expenses_editor",
-        hide_index=True
-    )
-    
-    if st.button("💾 Save Expense Changes"):
-        # Convert date strings back to datetime format before saving
-        edited_expenses['Date'] = pd.to_datetime(edited_expenses['Date'])
-        data['expenses'].loc[edited_expenses.index] = edited_expenses
-        save_data(data)
-        st.success("Expense changes saved successfully!")
+    # Display editable table - Only for treasurer
+    if st.session_state.get('treasurer_authenticated', False):
+        edited_expenses = st.data_editor(
+            filtered_expenses,
+            column_config={
+                "Amount (KES)": st.column_config.NumberColumn(
+                    "Amount (KES)", 
+                    format="%d",
+                    min_value=0
+                ),
+                "Date": st.column_config.TextColumn(
+                    "Date (YYYY-MM-DD)"
+                ),
+                "Category": st.column_config.SelectboxColumn(
+                    "Category",
+                    options=EXPENSE_CATEGORIES
+                )
+            },
+            use_container_width=True,
+            num_rows="dynamic",
+            key="expenses_editor",
+            hide_index=True
+        )
+        
+        if st.button("💾 Save Expense Changes"):
+            # Convert date strings back to datetime format before saving
+            edited_expenses['Date'] = pd.to_datetime(edited_expenses['Date'])
+            data['expenses'].loc[edited_expenses.index] = edited_expenses
+            save_data(data)
+            st.success("Expense changes saved successfully!")
+    else:
+        st.dataframe(
+            filtered_expenses,
+            use_container_width=True,
+            hide_index=True
+        )
     
     # Visualizations
     st.subheader("📊 Expense Analysis")
@@ -557,26 +668,33 @@ def social_contributions(data):
     if type_filter != "All":
         filtered_social = filtered_social[filtered_social['Type'] == type_filter]
     
-    # Display editable table
-    edited_social = st.data_editor(
-        filtered_social,
-        column_config={
-            "Amount": st.column_config.NumberColumn("Amount (KES)", format="%d"),
-            "Type": st.column_config.SelectboxColumn("Type", options=SOCIAL_TYPES),
-            "Date": st.column_config.TextColumn("Date (YYYY-MM-DD)")
-        },
-        use_container_width=True,
-        num_rows="dynamic",
-        key="social_editor",
-        hide_index=True
-    )
-    
-    if st.button("💾 Save Social Contribution Changes"):
-        # Convert date strings back to datetime format before saving
-        edited_social['Date'] = pd.to_datetime(edited_social['Date'])
-        data['social'].loc[edited_social.index] = edited_social
-        save_data(data)
-        st.success("Social contribution changes saved successfully!")
+    # Display editable table - Only for treasurer
+    if st.session_state.get('treasurer_authenticated', False):
+        edited_social = st.data_editor(
+            filtered_social,
+            column_config={
+                "Amount": st.column_config.NumberColumn("Amount (KES)", format="%d"),
+                "Type": st.column_config.SelectboxColumn("Type", options=SOCIAL_TYPES),
+                "Date": st.column_config.TextColumn("Date (YYYY-MM-DD)")
+            },
+            use_container_width=True,
+            num_rows="dynamic",
+            key="social_editor",
+            hide_index=True
+        )
+        
+        if st.button("💾 Save Social Contribution Changes"):
+            # Convert date strings back to datetime format before saving
+            edited_social['Date'] = pd.to_datetime(edited_social['Date'])
+            data['social'].loc[edited_social.index] = edited_social
+            save_data(data)
+            st.success("Social contribution changes saved successfully!")
+    else:
+        st.dataframe(
+            filtered_social,
+            use_container_width=True,
+            hide_index=True
+        )
     
     # Visualizations
     st.subheader("📊 Social Contributions Analysis")
@@ -676,6 +794,16 @@ def reports(data):
             color_discrete_sequence=px.colors.qualitative.Pastel
         )
         st.plotly_chart(fig, use_container_width=True)
+        
+        # Monthly Contribution Trend - New addition
+        monthly_contrib = data['contributions'][MONTHS].apply(pd.to_numeric, errors='coerce').sum()
+        fig = px.line(
+            monthly_contrib,
+            title="Monthly Contribution Trend",
+            labels={'value': 'Amount (KES)', 'index': 'Month'},
+            markers=True
+        )
+        st.plotly_chart(fig, use_container_width=True)
     
     elif report_type == "Expense Category Breakdown":
         expense_report = data['expenses'].groupby('Category')['Amount (KES)'].apply(safe_sum)
@@ -690,6 +818,18 @@ def reports(data):
             title="Expense Distribution by Category",
             color=expense_report.index,
             color_discrete_sequence=px.colors.qualitative.Pastel
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Monthly Expense Trend - New addition
+        monthly_expenses = data['expenses'].copy()
+        monthly_expenses['Month'] = pd.to_datetime(monthly_expenses['Date']).dt.strftime('%b').str.upper()
+        monthly_totals = monthly_expenses.groupby('Month')['Amount (KES)'].sum().reindex(MONTHS, fill_value=0)
+        fig = px.line(
+            monthly_totals, 
+            title="Monthly Expense Trend",
+            labels={'value': 'Amount (KES)', 'index': 'Month'},
+            markers=True
         )
         st.plotly_chart(fig, use_container_width=True)
     
@@ -758,41 +898,47 @@ def reports(data):
             )
             st.plotly_chart(fig, use_container_width=True)
     
-    # Export full report
-    st.subheader("📤 Export Full Report")
-    if st.button("🖨️ Generate Full Report"):
-        with pd.ExcelWriter("zawadi_full_report.xlsx") as writer:
-            # Summary sheet
-            pd.DataFrame({
-                'Metric': ['Total Regular Contributions', 'Total Expenses', 'Total Social Contributions'],
-                'Amount (KES)': [total_contributions, total_expenses, total_social]
-            }).to_excel(writer, sheet_name="Summary", index=False)
+    # Export full report - Only for treasurer
+    if st.session_state.get('treasurer_authenticated', False):
+        st.subheader("📤 Export Full Report")
+        if st.button("🖨️ Generate Full Report"):
+            with pd.ExcelWriter("zawadi_full_report.xlsx") as writer:
+                # Summary sheet
+                pd.DataFrame({
+                    'Metric': ['Total Regular Contributions', 'Total Expenses', 'Total Social Contributions'],
+                    'Amount (KES)': [total_contributions, total_expenses, total_social]
+                }).to_excel(writer, sheet_name="Summary", index=False)
+                
+                # Detail sheets
+                data['contributions'].to_excel(writer, sheet_name="Contributions")
+                data['expenses'].to_excel(writer, sheet_name="Expenses")
+                data['social'].to_excel(writer, sheet_name="Social")
+                if 'rates' in data:
+                    data['rates'].to_excel(writer, sheet_name="Rate Categories")
+                if 'expense_requests' in data:
+                    data['expense_requests'].to_excel(writer, sheet_name="Expense Requests")
             
-            # Detail sheets
-            data['contributions'].to_excel(writer, sheet_name="Contributions")
-            data['expenses'].to_excel(writer, sheet_name="Expenses")
-            data['social'].to_excel(writer, sheet_name="Social")
-            if 'rates' in data:
-                data['rates'].to_excel(writer, sheet_name="Rate Categories")
-        
-        with open("zawadi_full_report.xlsx", "rb") as f:
-            st.download_button(
-                "⬇️ Download Full Report",
-                f,
-                "zawadi_full_report.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            with open("zawadi_full_report.xlsx", "rb") as f:
+                st.download_button(
+                    "⬇️ Download Full Report",
+                    f,
+                    "zawadi_full_report.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+    else:
+        st.info("🔒 Treasurer access required to export full reports")
 
 def main():
     data = load_data()
     
     st.sidebar.title("🏠 Zawadi Court Welfare")
-    if not check_password():
-        st.warning("Please enter the admin password in the sidebar")
-        return
     
-    # Residency management in sidebar (collapsible)
-    residency_management(data)
+    # Check treasurer authentication only when needed
+    if 'treasurer_authenticated' not in st.session_state:
+        st.session_state.treasurer_authenticated = False
+    
+    # Password input in sidebar
+    check_treasurer_password()
     
     # Navigation
     page = st.sidebar.radio(
@@ -801,6 +947,11 @@ def main():
         index=0
     )
     
+    # Residency management in sidebar (collapsible) - Only for treasurer
+    if st.session_state.get('treasurer_authenticated', False):
+        residency_management(data)
+    
+    # Show the selected page
     if page == "Contributions Dashboard":
         contributions_dashboard(data)
     elif page == "Expense Tracker":
@@ -810,35 +961,38 @@ def main():
     elif page == "Reports":
         reports(data)
     
-    # Data management in sidebar
-    st.sidebar.subheader("💾 Data Management")
-    if st.sidebar.button("🔁 Backup All Data"):
-        save_data(data)
-        st.sidebar.success("Data backup completed!")
-    
-    uploaded_file = st.sidebar.file_uploader(
-        "Restore Data", 
-        type=['csv', 'xlsx'], 
-        accept_multiple_files=True,
-        help="Upload CSV files for contributions, expenses, or social data"
-    )
-    if uploaded_file and st.sidebar.button("🔄 Restore Data"):
-        try:
-            for file in uploaded_file:
-                if 'contributions' in file.name.lower():
-                    data['contributions'] = pd.read_csv(file)
-                elif 'expenses' in file.name.lower():
-                    data['expenses'] = pd.read_csv(file)
-                elif 'social' in file.name.lower():
-                    data['social'] = pd.read_csv(file)
-                elif 'rates' in file.name.lower():
-                    data['rates'] = pd.read_csv(file)
-            
+    # Data management in sidebar - Only for treasurer
+    if st.session_state.get('treasurer_authenticated', False):
+        st.sidebar.subheader("💾 Data Management")
+        if st.sidebar.button("🔁 Backup All Data"):
             save_data(data)
-            st.sidebar.success("Data restored successfully!")
-            st.rerun()
-        except Exception as e:
-            st.sidebar.error(f"Error restoring data: {e}")
+            st.sidebar.success("Data backup completed!")
+        
+        uploaded_file = st.sidebar.file_uploader(
+            "Restore Data", 
+            type=['csv', 'xlsx'], 
+            accept_multiple_files=True,
+            help="Upload CSV files for contributions, expenses, or social data"
+        )
+        if uploaded_file and st.sidebar.button("🔄 Restore Data"):
+            try:
+                for file in uploaded_file:
+                    if 'contributions' in file.name.lower():
+                        data['contributions'] = pd.read_csv(file)
+                    elif 'expenses' in file.name.lower():
+                        data['expenses'] = pd.read_csv(file)
+                    elif 'social' in file.name.lower():
+                        data['social'] = pd.read_csv(file)
+                    elif 'rates' in file.name.lower():
+                        data['rates'] = pd.read_csv(file)
+                    elif 'expense_requests' in file.name.lower():
+                        data['expense_requests'] = pd.read_csv(file)
+                
+                save_data(data)
+                st.sidebar.success("Data restored successfully!")
+                st.rerun()
+            except Exception as e:
+                st.sidebar.error(f"Error restoring data: {e}")
 
 if __name__ == "__main__":
     main()
