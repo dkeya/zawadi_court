@@ -34,7 +34,6 @@ hide_streamlit_style = """
         header {visibility: hidden;}
     </style>
 """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Constants
 LANES = ['ROYAL', 'SHUJAA', 'WEMA', 'KINGS']
@@ -217,7 +216,7 @@ def check_treasurer_password():
             st.session_state.treasurer_authenticated = False
     
     if not st.session_state.treasurer_authenticated:
-        password = st.sidebar.text_input("Enter Treasurer Password:", type="password", key="treasurer_pw")
+        password = st.sidebar.text_input("Treasurer Login:", type="password", key="treasurer_pw")
         if password:
             if password == TREASURER_PASSWORD:
                 st.session_state.treasurer_authenticated = True
@@ -1316,31 +1315,24 @@ def reports(data):
             labels={'Amount': 'Amount (KES)', 'Month': 'Month'},
             markers=True
         )
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Combined Monthly Trend
-        monthly_contrib = data['contributions'][MONTHS].apply(pd.to_numeric, errors='coerce').sum()
-        monthly_expenses = data['expenses'].copy()
-        monthly_expenses['Month'] = pd.to_datetime(monthly_expenses['Date']).dt.strftime('%b').str.upper()
-        monthly_exp_totals = monthly_expenses.groupby('Month')['Amount (KES)'].sum().reindex(MONTHS, fill_value=0)
-        
-        # Create combined dataframe
-        combined_df = pd.DataFrame({
-            'Month': MONTHS,
-            'Contributions': monthly_contrib,
-            'Expenses': monthly_exp_totals
-        }).melt(id_vars='Month', var_name='Type', value_name='Amount')
-        
-        fig = px.line(
-            combined_df,
-            x='Month',
-            y='Amount',
-            color='Type',
-            title="Monthly Contribution vs Expense Trend",
-            labels={'Amount': 'Amount (KES)', 'Month': 'Month'},
-            markers=True
+        st.plotly_chart(fig, use_container_width=True, key="monthly_trend_chart")
+    
+    elif report_type == "Expense Category Breakdown":
+        expense_report = data['expenses'].groupby('Category')['Amount (KES)'].apply(safe_sum)
+        st.dataframe(
+            expense_report.to_frame('Total Amount').style.format("KES {:,.2f}"),
+            use_container_width=True
         )
-        st.plotly_chart(fig, use_container_width=True)
+        
+        fig = px.pie(
+            expense_report, 
+            names=expense_report.index, 
+            title="Expense Distribution by Category",
+            color=expense_report.index,
+            color_discrete_sequence=px.colors.qualitative.Pastel,
+            values='Amount (KES)'
+        )
+        st.plotly_chart(fig, use_container_width=True, key="expense_pie_chart")
     
     elif report_type == "Payment Status Distribution":
         status_report = data['contributions']['Status'].value_counts()
@@ -1357,7 +1349,7 @@ def reports(data):
             color_discrete_sequence=['#2ecc71', '#f39c12', '#e74c3c'],  # Green, Orange, Red
             values='Households'
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="status_pie_chart")
     
     elif report_type == "Rate Category Analysis":
         if 'Rate Category' in data['contributions'].columns:
@@ -1389,7 +1381,7 @@ def reports(data):
                 color=rate_report.index,
                 color_discrete_sequence=px.colors.qualitative.Pastel
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key="rate_category_bar")
     
     elif report_type == "Special Contributions Analysis":
         if not data['special'].empty:
@@ -1407,7 +1399,7 @@ def reports(data):
                 color_discrete_sequence=px.colors.qualitative.Pastel,
                 values='Amount'
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key="special_pie_chart")
             
     elif report_type == "Year-on-Year Trends":
         st.subheader("Year-on-Year Financial Trends")
@@ -1438,7 +1430,7 @@ def reports(data):
                 title="Year-on-Year Financial Comparison",
                 labels={'value': 'Amount (KES)', 'variable': 'Category'}
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key="yearly_comparison_bar")
     
     # Export reports - available to all members
     st.subheader("📤 Export Reports")
@@ -1657,7 +1649,7 @@ def main():
                         data['contribution_requests'] = pd.read_csv(file)
                     elif 'special_requests' in file.name.lower():
                         data['special_requests'] = pd.read_csv(file)
-                               
+                
                 save_data(data)
                 st.sidebar.success("Data restored successfully!")
                 st.rerun()
