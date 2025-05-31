@@ -26,6 +26,16 @@ st.set_page_config(
     }
 )
 
+# Hide Default Streamlit Elements
+hide_streamlit_style = """
+    <style>
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 # Constants
 LANES = ['ROYAL', 'SHUJAA', 'WEMA', 'KINGS']
 MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -1647,7 +1657,7 @@ def main():
                         data['contribution_requests'] = pd.read_csv(file)
                     elif 'special_requests' in file.name.lower():
                         data['special_requests'] = pd.read_csv(file)
-                
+                               
                 save_data(data)
                 st.sidebar.success("Data restored successfully!")
                 st.rerun()
