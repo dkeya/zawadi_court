@@ -34,6 +34,7 @@ hide_streamlit_style = """
         header {visibility: hidden;}
     </style>
 """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Constants
 LANES = ['ROYAL', 'SHUJAA', 'WEMA', 'KINGS']
