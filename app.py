@@ -403,48 +403,75 @@ def contributions_dashboard(data):
     # Contribution Request Form - Visible to all members
     if not st.session_state.get('treasurer_authenticated', False):
         with st.expander("➕ Register Contribution", expanded=False):
+            # Initialize session state for form fields if not exists
+            if 'contribution_form' not in st.session_state:
+                st.session_state.contribution_form = {
+                    'family_name': "",
+                    'house_no': "",
+                    'lane': "",
+                    'rate_category': ""
+                }
+            
             with st.form("contribution_request_form"):
                 # Get unique family names
                 family_names = data['contributions']['Family Name'].unique().tolist()
                 family_names = [name for name in family_names if str(name) != 'nan']
             
                 # Family name selection with auto-population
-                family_name = st.selectbox(
+                selected_family = st.selectbox(
                     "Select your family name",
                     [""] + sorted(family_names),
                     index=0,
                     key="family_name_select"
                 )
-            
-                # Auto-populate details immediately when family name is selected
-                if family_name:
-                    family_data = data['contributions'][data['contributions']['Family Name'] == family_name].iloc[0]
-                    house_no = family_data['House No']
-                    lane = family_data['Lane']
-                    rate_category = family_data['Rate Category']
+                
+                # Get family data if selected
+                if selected_family:
+                    family_data = data['contributions'][data['contributions']['Family Name'] == selected_family].iloc[0]
+                    st.session_state.contribution_form = {
+                        'family_name': selected_family,
+                        'house_no': family_data['House No'],
+                        'lane': family_data['Lane'],
+                        'rate_category': family_data['Rate Category']
+                    }
                 else:
-                    house_no = ""
-                    lane = ""
-                    rate_category = ""
-            
-                # Display fields (now editable)
+                    st.session_state.contribution_form = {
+                        'family_name': "",
+                        'house_no': "",
+                        'lane': "",
+                        'rate_category': ""
+                    }
+                
+                # Display fields with values from session state
                 cols = st.columns(2)
                 with cols[0]:
-                    house_no = st.text_input("House No", value=house_no, key="house_no_input")
+                    house_no = st.text_input(
+                        "House No", 
+                        value=st.session_state.contribution_form['house_no'],
+                        key="house_no_input"
+                    )
                 with cols[1]:
-                    lane = st.text_input("Lane", value=lane, key="lane_input")
-            
-                rate_category = st.text_input("Rate Category", value=rate_category, key="rate_category_input")
-            
+                    lane = st.text_input(
+                        "Lane", 
+                        value=st.session_state.contribution_form['lane'],
+                        key="lane_input"
+                    )
+                
+                rate_category = st.text_input(
+                    "Rate Category", 
+                    value=st.session_state.contribution_form['rate_category'],
+                    key="rate_category_input"
+                )
+                
                 # Contribution details
                 st.info("Payment Details: Paybill: 522522 | A/C: 1313659029")
                 amount = st.number_input("Amount Paid (KES)", min_value=0, step=1000)
                 payment_date = st.date_input("Payment Date", datetime.now())
                 payment_ref = st.text_input("Payment Reference/Receipt Number")
                 remarks = st.text_area("Remarks (optional)")
-            
+                
                 if st.form_submit_button("Submit Contribution"):
-                    if not family_name:
+                    if not selected_family:
                         st.error("Please select your family name")
                     elif amount <= 0:
                         st.error("Please enter a valid amount")
@@ -452,7 +479,7 @@ def contributions_dashboard(data):
                         new_request = {
                             'Date': payment_date.strftime('%Y-%m-%d'),
                             'Month': current_month,
-                            'Family Name': family_name,
+                            'Family Name': selected_family,
                             'House No': house_no,
                             'Lane': lane,
                             'Rate Category': rate_category,
@@ -1183,6 +1210,13 @@ def reports(data):
     def safe_sum(series):
         return sum(safe_convert_to_float(x) for x in series)
     
+    current_month = get_current_month()
+    
+    # Recalculate all metrics to ensure consistency
+    data['contributions']['YTD'] = data['contributions'].apply(
+        lambda row: calculate_ytd(row, current_month), axis=1
+    )
+    
     # Summary statistics
     st.subheader("📊 Summary Statistics")
     cols = st.columns(3)
@@ -1228,30 +1262,19 @@ def reports(data):
         "Detailed Monthly Contributions",
         "Detailed Expense Records",
         "Year-on-Year Trends"
-    ], index=0)  # Default to "Lane-wise Contributions"
+    ], index=0)
     
-    if report_type == "Detailed Monthly Contributions":
-        st.subheader("Detailed Monthly Contributions")
-        st.dataframe(
-            data['contributions'],
-            use_container_width=True,
-            hide_index=True
-        )
-        
-    elif report_type == "Detailed Expense Records":
-        st.subheader("Detailed Expense Records")
-        st.dataframe(
-            data['expenses'],
-            use_container_width=True,
-            hide_index=True
-        )
-        
-    elif report_type == "Lane-wise Contributions":
+    if report_type == "Lane-wise Contributions":
         lane_report = data['contributions'].groupby('Lane').agg({
             'YTD': lambda x: safe_sum(x),
             'Current Debt': lambda x: safe_sum(x),
             'House No': 'count'
         }).rename(columns={'House No': 'Households'})
+        
+        # Verify consistency
+        lane_total = safe_sum(lane_report['YTD'])
+        if abs(lane_total - total_contributions) > 0.01:  # Allow for floating point rounding
+            st.warning(f"Data consistency issue: Lane-wise total ({lane_total:,.2f}) doesn't match summary total ({total_contributions:,.2f})")
         
         st.dataframe(
             lane_report.style.format({
@@ -1282,23 +1305,6 @@ def reports(data):
             title="Monthly Contribution vs Expense Trend",
             labels={'Amount': 'Amount (KES)', 'Month': 'Month'},
             markers=True
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    elif report_type == "Expense Category Breakdown":
-        expense_report = data['expenses'].groupby('Category')['Amount (KES)'].apply(safe_sum)
-        st.dataframe(
-            expense_report.to_frame('Total Amount').style.format("KES {:,.2f}"),
-            use_container_width=True
-        )
-        
-        fig = px.pie(
-            expense_report, 
-            names=expense_report.index, 
-            title="Expense Distribution by Category",
-            color=expense_report.index,
-            color_discrete_sequence=px.colors.qualitative.Pastel,
-            values='Amount (KES)'
         )
         st.plotly_chart(fig, use_container_width=True)
         
