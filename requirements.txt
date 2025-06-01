@@ -7,3 +7,9 @@ geopandas
 plotly
 openpyxl
 WordCloud
+streamlit
+pandas
+numpy
+plotly
+xlsxwriter
+openpyxl
