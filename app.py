@@ -1337,20 +1337,34 @@ def reports(data):
 
     elif report_type == "Payment Status Distribution":
         status_report = data['contributions']['Status'].value_counts()
+    
+        # Convert to DataFrame if it's a Series
+        if isinstance(status_report, pd.Series):
+            status_report = status_report.reset_index()
+            status_report.columns = ['Status', 'Count']
+    
         st.dataframe(
-            status_report.to_frame('Households'),
+            status_report,
             use_container_width=True
         )
-
+    
+        # Create a color mapping for the statuses
+        color_map = {
+            "🟢 Up-to-date": "#2ecc71",
+            "🟠 1-2 months behind": "#f39c12",
+            "🔴 >2 months behind": "#e74c3c"
+        }
+    
+        # Create the pie chart with explicit values
         fig = px.pie(
             status_report,
-            names=status_report.index,
+            names='Status',
+            values='Count',
             title="Payment Status Distribution",
-            color=status_report.index,
-            color_discrete_sequence=['#2ecc71', '#f39c12', '#e74c3c'],  # Green, Orange, Red
-            values='Households'
+            color='Status',
+            color_discrete_map=color_map
         )
-        st.plotly_chart(fig, use_container_width=True, key="status_pie_chart")
+        st.plotly_chart(fig, use_container_width=True)
 
     elif report_type == "Rate Category Analysis":
         if 'Rate Category' in data['contributions'].columns:
