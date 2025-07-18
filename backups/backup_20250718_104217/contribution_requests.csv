@@ -1,0 +1,9 @@
+Date,House No,Family Name,Lane,Rate Category,Month,Amount (KES),Status,Remarks
+2025-05-26,56,David Keya,WEMA,Resident,JAN,2000.0,Approve,Verified by treasurer - test
+2025-05-27,56,David Keya,WEMA,Resident,MAY,1000.0,Reject,Verified and approved by treasurer - Payment Ref: . tes
+2025-05-27,56,David Keya,WEMA,Resident,MAY,1000.0,Reject,Verified and approved by treasurer - Payment Ref: . test
+2025-05-30,3,David Mureithi,ROYAL,Resident,MAY,5000.0,Approve,Verified and approved by treasurer - Payment Ref: . 
+2025-05-30,7,Grace Wakaba,ROYAL,Resident,MAY,2000.0,Approve,Verified and approved by treasurer - Payment Ref: . 
+2025-05-30,12,Daniel Kyende/Jane Ndolo,ROYAL,Resident,MAY,2000.0,Approve,Verified and approved by treasurer - Payment Ref: . 
+2025-05-30,24,Joshua Oliech,SHUJAA,Resident,MAY,5000.0,Approve,Verified and approved by treasurer - Payment Ref: . 
+2025-05-30,27,Andrew Mutune,SHUJAA,Resident,MAY,3000.0,Approve,Verified and approved by treasurer - Payment Ref: . 

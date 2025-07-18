@@ -12,6 +12,8 @@ import time
 import unittest
 from unittest.mock import patch, MagicMock
 import io
+import shutil
+import glob
 
 # Page configuration with mobile-friendly settings
 st.set_page_config(
@@ -50,6 +52,10 @@ EMAIL_CONFIG = {
     'port': 587
 }
 
+# Backup configuration
+BACKUP_DIR = "backups"
+MAX_BACKUPS = 30  # Keep last 30 backups
+
 # Mobile optimization - responsive layout functions
 def is_mobile():
     """Check if the screen is mobile size"""
@@ -76,8 +82,52 @@ def safe_convert_to_float(value):
     except (ValueError, TypeError):
         return 0.0
 
+def create_backup():
+    """Create a timestamped backup of all data files"""
+    try:
+        # Create backups directory if it doesn't exist
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        
+        # Generate timestamp for backup folder
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = os.path.join(BACKUP_DIR, f"backup_{timestamp}")
+        os.makedirs(backup_path)
+        
+        # Copy all data files to backup directory
+        data_files = glob.glob('data/*.csv')
+        for file in data_files:
+            shutil.copy(file, backup_path)
+            
+        # Clean up old backups if we exceed MAX_BACKUPS
+        backups = sorted(glob.glob(os.path.join(BACKUP_DIR, 'backup_*')))
+        while len(backups) > MAX_BACKUPS:
+            oldest_backup = backups.pop(0)
+            shutil.rmtree(oldest_backup)
+            
+        return True
+    except Exception as e:
+        st.error(f"Backup failed: {str(e)}")
+        return False
+
+def restore_backup(backup_path):
+    """Restore data from a backup directory"""
+    try:
+        # Verify backup directory exists
+        if not os.path.exists(backup_path):
+            return False
+            
+        # Copy all files from backup to data directory
+        backup_files = glob.glob(os.path.join(backup_path, '*.csv'))
+        for file in backup_files:
+            shutil.copy(file, 'data')
+            
+        return True
+    except Exception as e:
+        st.error(f"Restore failed: {str(e)}")
+        return False
+
 def load_data():
-    """Load and clean data from CSV files"""
+    """Load and clean data from CSV files with persistence handling"""
     data_files = {
         'contributions': 'data/contributions.csv',
         'expenses': 'data/expenses.csv',
@@ -89,6 +139,7 @@ def load_data():
         'cash_management': 'data/cash_management.csv'
     }
 
+    # Ensure data directory exists
     os.makedirs('data', exist_ok=True)
 
     data = {}
@@ -194,16 +245,26 @@ def load_data():
     return data
 
 def save_data(data):
-    """Save data to CSV files"""
-    for name, df in data.items():
-        df.to_csv(f'data/{name}.csv', index=False)
+    """Save data to CSV files with automatic backup"""
+    try:
+        # First create a backup
+        create_backup()
+        
+        # Then save current data
+        for name, df in data.items():
+            df.to_csv(f'data/{name}.csv', index=False)
 
-    # Save cash management data
-    cash_df = pd.DataFrame({
-        'Cash Balance c/d': [st.session_state.cash_balance_cd],
-        'Cash Withdrawal': [st.session_state.cash_withdrawal]
-    })
-    cash_df.to_csv('data/cash_management.csv', index=False)
+        # Save cash management data
+        cash_df = pd.DataFrame({
+            'Cash Balance c/d': [st.session_state.cash_balance_cd],
+            'Cash Withdrawal': [st.session_state.cash_withdrawal]
+        })
+        cash_df.to_csv('data/cash_management.csv', index=False)
+        
+        return True
+    except Exception as e:
+        st.error(f"Error saving data: {str(e)}")
+        return False
 
 def check_treasurer_password():
     """Check if user has entered the treasurer password"""
@@ -966,9 +1027,9 @@ def expense_tracker(data):
     # Visualizations - responsive layout
     st.subheader("📊 Expense Analysis")
 
-    if is_mobile():
-        with st.expander("Expense Breakdown", expanded=False):
-            if not filtered_expenses.empty:
+    if not filtered_expenses.empty:
+        if is_mobile():
+            with st.expander("Expense Breakdown", expanded=False):
                 category_totals = filtered_expenses.groupby('Category')['Amount (KES)'].sum()
                 fig = px.pie(
                     category_totals,
@@ -980,8 +1041,7 @@ def expense_tracker(data):
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-        with st.expander("Monthly Trend", expanded=False):
-            if not data['expenses'].empty:
+            with st.expander("Monthly Trend", expanded=False):
                 monthly_expenses = data['expenses'].copy()
                 monthly_expenses['Month'] = pd.to_datetime(monthly_expenses['Date']).dt.strftime('%b').str.upper()
                 monthly_totals = monthly_expenses.groupby('Month')['Amount (KES)'].sum().reindex(MONTHS, fill_value=0)
@@ -992,11 +1052,10 @@ def expense_tracker(data):
                     markers=True
                 )
                 st.plotly_chart(fig, use_container_width=True)
-    else:
-        viz_cols = st.columns(2)
+        else:
+            viz_cols = st.columns(2)
 
-        with viz_cols[0]:
-            if not filtered_expenses.empty:
+            with viz_cols[0]:
                 category_totals = filtered_expenses.groupby('Category')['Amount (KES)'].sum()
                 fig = px.pie(
                     category_totals,
@@ -1008,8 +1067,7 @@ def expense_tracker(data):
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-        with viz_cols[1]:
-            if not data['expenses'].empty:
+            with viz_cols[1]:
                 monthly_expenses = data['expenses'].copy()
                 monthly_expenses['Month'] = pd.to_datetime(monthly_expenses['Date']).dt.strftime('%b').str.upper()
                 monthly_totals = monthly_expenses.groupby('Month')['Amount (KES)'].sum().reindex(MONTHS, fill_value=0)
@@ -1634,42 +1692,70 @@ def main():
     elif page == "Reports":
         reports(data)
 
-    # Data management in sidebar - Only for treasurer
+    # Enhanced Data management in sidebar - Only for treasurer
     if st.session_state.get('treasurer_authenticated', False):
         st.sidebar.subheader("💾 Data Management")
-        if st.sidebar.button("🔁 Backup All Data"):
-            save_data(data)
-            st.sidebar.success("Data backup completed!")
+        
+        # Backup section
+        with st.sidebar.expander("🔁 Backup Options", expanded=False):
+            if st.button("Create New Backup"):
+                if create_backup():
+                    st.success("Backup created successfully in 'backups' directory!")
+                else:
+                    st.error("Backup failed")
+            
+            # List available backups
+            backups = sorted(glob.glob(os.path.join(BACKUP_DIR, 'backup_*')), reverse=True)
+            if backups:
+                st.write("Available Backups:")
+                selected_backup = st.selectbox(
+                    "Select backup to restore",
+                    backups,
+                    format_func=lambda x: os.path.basename(x)
+                )
+                
+                if st.button("🔄 Restore Selected Backup"):
+                    if restore_backup(selected_backup):
+                        st.success("Backup restored successfully! Please refresh the page.")
+                        time.sleep(2)
+                        st.rerun()
+                    else:
+                        st.error("Restore failed")
+            else:
+                st.info("No backups available yet")
 
-        uploaded_file = st.sidebar.file_uploader(
-            "Restore Data",
-            type=['csv', 'xlsx'],
-            accept_multiple_files=True,
-            help="Upload CSV files for contributions, expenses, or special data"
-        )
-        if uploaded_file and st.sidebar.button("🔄 Restore Data"):
-            try:
-                for file in uploaded_file:
-                    if 'contributions' in file.name.lower():
-                        data['contributions'] = pd.read_csv(file)
-                    elif 'expenses' in file.name.lower():
-                        data['expenses'] = pd.read_csv(file)
-                    elif 'special' in file.name.lower():
-                        data['special'] = pd.read_csv(file)
-                    elif 'rates' in file.name.lower():
-                        data['rates'] = pd.read_csv(file)
-                    elif 'expense_requests' in file.name.lower():
-                        data['expense_requests'] = pd.read_csv(file)
-                    elif 'contribution_requests' in file.name.lower():
-                        data['contribution_requests'] = pd.read_csv(file)
-                    elif 'special_requests' in file.name.lower():
-                        data['special_requests'] = pd.read_csv(file)
+        # Manual data restore section
+        with st.sidebar.expander("📤 Manual Data Restore", expanded=False):
+            st.warning("Use with caution - will overwrite current data")
+            uploaded_file = st.file_uploader(
+                "Upload CSV file to restore",
+                type=['csv'],
+                accept_multiple_files=True,
+                help="Upload CSV files for contributions, expenses, or special data"
+            )
+            if uploaded_file and st.button("Restore from Uploaded Files"):
+                try:
+                    for file in uploaded_file:
+                        if 'contributions' in file.name.lower():
+                            data['contributions'] = pd.read_csv(file)
+                        elif 'expenses' in file.name.lower():
+                            data['expenses'] = pd.read_csv(file)
+                        elif 'special' in file.name.lower():
+                            data['special'] = pd.read_csv(file)
+                        elif 'rates' in file.name.lower():
+                            data['rates'] = pd.read_csv(file)
+                        elif 'expense_requests' in file.name.lower():
+                            data['expense_requests'] = pd.read_csv(file)
+                        elif 'contribution_requests' in file.name.lower():
+                            data['contribution_requests'] = pd.read_csv(file)
+                        elif 'special_requests' in file.name.lower():
+                            data['special_requests'] = pd.read_csv(file)
 
-                save_data(data)
-                st.sidebar.success("Data restored successfully!")
-                st.rerun()
-            except Exception as e:
-                st.sidebar.error(f"Error restoring data: {e}")
+                    save_data(data)
+                    st.success("Data restored successfully from uploaded files!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error restoring data: {e}")
 
     # Run tests if in development mode
     if os.getenv('DEV_MODE'):
