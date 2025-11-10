@@ -1,0 +1,11 @@
+﻿# Python / Streamlit
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+.venv/
+
+# Local data/exports
+backups/
+data/
+receipts/
+*.xlsx
