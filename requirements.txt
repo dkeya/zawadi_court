@@ -1,15 +1,11 @@
-streamlit >= 1.40.1
-pandas>=2.0
-matplotlib
-numpy>=1.26.0
-streamlit-aggrid
-geopandas
-plotly
-openpyxl
-WordCloud
-streamlit
-pandas
-numpy
-plotly
-xlsxwriter
-openpyxl
+﻿streamlit>=1.37
+pandas>=2.2
+numpy>=1.26
+plotly>=5.22
+SQLAlchemy>=2.0
+psycopg2-binary>=2.9
+python-dotenv>=1.0
+gspread>=6.1
+google-auth>=2.35
+openpyxl>=3.1
+xlsxwriter>=3.2
