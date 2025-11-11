@@ -45,20 +45,16 @@ from zawadi_db import (
     insert_contribution_request, approve_contribution_request,
     insert_expense_request, set_expense_request_status, insert_expense,
     update_cash_management, upsert_rates, update_household_rate_email,
-    insert_special_request, set_special_request_status, insert_special
-)
+    insert_special_request, set_special_request_status, insert_special,
 
-# Page configuration with mobile-friendly settings
-st.set_page_config(
-    page_title="Zawadi Court Welfare System",
-    page_icon="🏠",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': 'https://example.com/help',
-        'Report a bug': "https://example.com/bug",
-        'About': "# Zawadi Court Welfare System"
-    }
+    # ✅ Admin (edit/delete) helpers used in Treasurer panel
+    update_contribution_row,
+    delete_contributions_by_house,
+    delete_contribution_requests,
+    delete_expense_requests,
+    delete_expenses,
+    delete_special_requests,
+    delete_special,
 )
 
 # Hide Default Streamlit Elements
@@ -1618,6 +1614,174 @@ def main():
         special_contributions(data)
     elif page == "Reports":
         reports(data)
+
+    # ========== Admin: Edit / Delete (Treasurer only) ==========
+    if st.session_state.get('treasurer_authenticated', False):
+        st.markdown("---")
+        st.subheader("🛠️ Admin: Edit / Delete (Treasurer)")
+
+        admin_tabs = st.tabs([
+            "Households (Contributions)",
+            "Requests & Expenses",
+            "Special Events"
+        ])
+
+        # --- Households (Contributions) ---
+        with admin_tabs[0]:
+            df = data.get('contributions', pd.DataFrame()).copy()
+            if df.empty:
+                st.info("No households found.")
+            else:
+                left, right = st.columns([1, 2])
+                with left:
+                    hn = st.selectbox(
+                        "Select House No",
+                        options=df["House No"].astype(str).tolist(),
+                        index=0,
+                    )
+
+                row = df.loc[df["House No"].astype(str) == str(hn)].iloc[0].copy()
+
+                with right:
+                    st.markdown("**Edit selected household**")
+                    family_name = st.text_input("Family Name", row.get("Family Name", ""))
+                    lane = st.text_input("Lane", row.get("Lane", ""))
+                    rate_category = st.text_input("Rate Category", row.get("Rate Category", ""))
+                    email = st.text_input("Email", row.get("Email", ""))
+
+                    colA, colB = st.columns(2)
+                    with colA:
+                        cum_prior = st.number_input(
+                            "Cumulative Debt (2024 & Prior)",
+                            value=float(row.get("Cumulative Debt (2024 & Prior)", 0) or 0.0),
+                            step=100.0
+                        )
+                        status = st.text_input("Status", row.get("Status", ""))
+                    with colB:
+                        remarks = st.text_area("Remarks", row.get("Remarks", ""))
+
+                    st.markdown("**Monthly amounts**")
+                    months = {}
+                    mcols = st.columns(6)
+                    labels = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"]
+                    for i, m in enumerate(labels):
+                        with mcols[i % 6]:
+                            months[m] = st.number_input(m, value=float(row.get(m, 0) or 0.0), step=100.0)
+
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("💾 Save Changes"):
+                            try:
+                                update_contribution_row(
+                                    house_no=str(hn),
+                                    family_name=family_name,
+                                    lane=lane,
+                                    rate_category=rate_category,
+                                    email=email,
+                                    cumulative_debt_prior=cum_prior,
+                                    months=months,
+                                    status=status,
+                                    remarks=remarks,
+                                )
+                                st.success(f"Updated household {hn}.")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Update failed: {e}")
+
+                    with c2:
+                        if st.button("🗑️ Delete Household", type="primary"):
+                            try:
+                                delete_contributions_by_house([str(hn)])
+                                st.success(f"Deleted household {hn} and related pending requests.")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Delete failed: {e}")
+
+        # --- Requests & Expenses ---
+        with admin_tabs[1]:
+            c_req = data.get('contribution_requests', pd.DataFrame()).copy()
+            e_req = data.get('expense_requests', pd.DataFrame()).copy()
+            exp   = data.get('expenses', pd.DataFrame()).copy()
+
+            st.markdown("**Contribution Requests**")
+            if c_req.empty:
+                st.caption("None.")
+            else:
+                ids = st.multiselect("Select request IDs to delete", c_req["id"].astype(int).tolist(), [])
+                if st.button("🗑️ Delete Selected Contribution Requests"):
+                    try:
+                        delete_contribution_requests([int(i) for i in ids])
+                        st.success(f"Deleted {len(ids)} contribution request(s).")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Delete failed: {e}")
+
+            st.markdown("**Expense Requests**")
+            if e_req.empty:
+                st.caption("None.")
+            else:
+                ids = st.multiselect("Select expense-request IDs to delete", e_req["id"].astype(int).tolist(), key="exp_req_ids")
+                if st.button("🗑️ Delete Selected Expense Requests"):
+                    try:
+                        delete_expense_requests([int(i) for i in ids])
+                        st.success(f"Deleted {len(ids)} expense request(s).")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Delete failed: {e}")
+
+            st.markdown("**Expenses**")
+            if exp.empty:
+                st.caption("None.")
+            else:
+                # if there is no 'id' column, skip the tool gracefully
+                if 'id' not in exp.columns:
+                    st.info("Expenses table has no 'id' column; delete by ID is unavailable.")
+                else:
+                    ids = st.multiselect("Select expense IDs to delete", exp["id"].astype(int).tolist(), key="exp_ids")
+                    if st.button("🗑️ Delete Selected Expenses"):
+                        try:
+                            delete_expenses([int(i) for i in ids])
+                            st.success(f"Deleted {len(ids)} expense(s).")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Delete failed: {e}")
+
+        # --- Special Events ---
+        with admin_tabs[2]:
+            sp  = data.get('special', pd.DataFrame()).copy()
+            spr = data.get('special_requests', pd.DataFrame()).copy()
+
+            st.markdown("**Special Contributions**")
+            if sp.empty:
+                st.caption("None.")
+            else:
+                if 'id' not in sp.columns:
+                    st.info("Special table has no 'id' column; delete by ID is unavailable.")
+                else:
+                    ids = st.multiselect("Select special IDs to delete", sp["id"].astype(int).tolist(), key="sp_ids")
+                    if st.button("🗑️ Delete Selected Special"):
+                        try:
+                            delete_special([int(i) for i in ids])
+                            st.success(f"Deleted {len(ids)} special record(s).")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Delete failed: {e}")
+
+            st.markdown("**Special Requests**")
+            if spr.empty:
+                st.caption("None.")
+            else:
+                if 'id' not in spr.columns:
+                    st.info("Special Requests table has no 'id' column; delete by ID is unavailable.")
+                else:
+                    ids = st.multiselect("Select special-request IDs to delete", spr["id"].astype(int).tolist(), key="spr_ids")
+                    if st.button("🗑️ Delete Selected Special Requests"):
+                        try:
+                            delete_special_requests([int(i) for i in ids])
+                            st.success(f"Deleted {len(ids)} special request(s).")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Delete failed: {e}")
 
     if st.session_state.get('treasurer_authenticated', False):
         st.sidebar.subheader("💾 Data Management")
