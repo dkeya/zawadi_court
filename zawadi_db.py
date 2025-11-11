@@ -409,3 +409,144 @@ def _ensure_special_tables():
                 );
             """)
         # conn.autocommit=True already; explicit commit not required
+
+# ---------------------------------------------------------------------
+# Admin: edit / delete helpers (Treasurer tools)
+# ---------------------------------------------------------------------
+def update_contribution_row(
+    house_no,
+    family_name=None,
+    lane=None,
+    rate_category=None,
+    email=None,
+    cumulative_debt_prior=None,
+    months=None,     # e.g. {"JAN": 1000, "FEB": 0, ...}
+    status=None,
+    remarks=None,
+):
+    """
+    Update a single row in public.contributions by house_no.
+    Only updates fields provided (None means 'leave as is').
+    Recomputes YTD automatically and stamps updated_at.
+    """
+    def _num_or_none(x):
+        if x in ("", None):
+            return None
+        try:
+            return float(x)
+        except Exception:
+            return None
+
+    month_map = {
+        "JAN": "jan","FEB": "feb","MAR": "mar","APR": "apr","MAY": "may","JUN": "jun",
+        "JUL": "jul","AUG": "aug","SEP": "sep","OCT": "oct","NOV": "nov","DEC": "dec",
+    }
+    sets = []
+    params = {"house_no": str(house_no)}
+
+    if family_name is not None:
+        sets.append("family_name = %(family_name)s")
+        params["family_name"] = family_name.strip() if isinstance(family_name, str) else family_name
+    if lane is not None:
+        sets.append("lane = %(lane)s")
+        params["lane"] = lane.strip() if isinstance(lane, str) else lane
+    if rate_category is not None:
+        sets.append("rate_category = %(rate_category)s")
+        params["rate_category"] = rate_category.strip() if isinstance(rate_category, str) else rate_category
+    if email is not None:
+        sets.append("email = %(email)s")
+        params["email"] = email.strip() if isinstance(email, str) else email
+    if cumulative_debt_prior is not None:
+        sets.append("cumulative_debt_prior = %(cumulative_debt_prior)s")
+        params["cumulative_debt_prior"] = _num_or_none(cumulative_debt_prior)
+    if status is not None:
+        sets.append("status = %(status)s")
+        params["status"] = status.strip() if isinstance(status, str) else status
+    if remarks is not None:
+        sets.append("remarks = %(remarks)s")
+        params["remarks"] = remarks
+
+    if months:
+        for k, v in months.items():
+            k = str(k).upper().strip()
+            if k in month_map:
+                col = month_map[k]
+                sets.append(f"{col} = %({col})s")
+                params[col] = _num_or_none(v)
+
+    # Always recompute YTD + timestamp when we touch the row
+    sets.append("""
+        ytd = COALESCE(jan,0)+COALESCE(feb,0)+COALESCE(mar,0)+COALESCE(apr,0)+COALESCE(may,0)+COALESCE(jun,0)
+            +COALESCE(jul,0)+COALESCE(aug,0)+COALESCE(sep,0)+COALESCE(oct,0)+COALESCE(nov,0)+COALESCE(dec,0)
+    """)
+    sets.append("updated_at = NOW()")
+
+    if not sets:
+        return 0  # nothing to update
+
+    sql = f"""
+        UPDATE public.contributions
+           SET {', '.join(sets)}
+         WHERE house_no = %(house_no)s
+    """
+    return _exec(sql, params=params)
+
+def delete_contributions_by_house(house_nos):
+    """
+    Deletes households from contributions and any pending requests referencing them.
+    """
+    if not house_nos:
+        return 0, 0
+    ids_list = list(house_nos)
+    with _conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM public.contribution_requests WHERE house_no = ANY(%s)",
+            (ids_list,),
+        )
+        deleted_reqs = cur.rowcount
+        cur.execute(
+            "DELETE FROM public.contributions WHERE house_no = ANY(%s)",
+            (ids_list,),
+        )
+        deleted_rows = cur.rowcount
+        return deleted_rows, deleted_reqs  # autocommit is on
+
+def delete_contribution_requests(ids):
+    if not ids:
+        return 0
+    return _exec(
+        "DELETE FROM public.contribution_requests WHERE id = ANY(%(ids)s)",
+        {"ids": list(ids)}
+    )
+
+def delete_expenses(ids):
+    if not ids:
+        return 0
+    return _exec(
+        "DELETE FROM public.expenses WHERE id = ANY(%(ids)s)",
+        {"ids": list(ids)}
+    )
+
+def delete_expense_requests(ids):
+    if not ids:
+        return 0
+    return _exec(
+        "DELETE FROM public.expense_requests WHERE id = ANY(%(ids)s)",
+        {"ids": list(ids)}
+    )
+
+def delete_special(ids):
+    if not ids:
+        return 0
+    return _exec(
+        "DELETE FROM public.special WHERE id = ANY(%(ids)s)",
+        {"ids": list(ids)}
+    )
+
+def delete_special_requests(ids):
+    if not ids:
+        return 0
+    return _exec(
+        "DELETE FROM public.special_requests WHERE id = ANY(%(ids)s)",
+        {"ids": list(ids)}
+    )
