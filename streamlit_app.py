@@ -3,17 +3,44 @@
 # --- Env/secrets bootstrap (must run BEFORE importing zawadi_db) ---
 import os
 import streamlit as st
+
+# ✅ Global page config (do this first)
+st.set_page_config(
+    page_title="Zawadi Court Welfare",
+    page_icon="🏠",
+    layout="wide",                  # default to wide
+    initial_sidebar_state="expanded"
+)
+
+# ✅ Hide Streamlit chrome + GitHub badge
+st.markdown("""
+<style>
+/* Hide Streamlit default UI */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* Hide GitHub viewer badge (cover multiple known classes/selectors) */
+.viewerBadge_container__r5tak,
+.viewerBadge_link__1S137,
+.st-emotion-cache-1b4cjjp {
+    display: none !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Load .env locally (ignored on Streamlit Cloud)
 try:
     from dotenv import load_dotenv  # pip install python-dotenv
     load_dotenv(override=False)
 except Exception:
     pass
 
-# Merge Streamlit Cloud secrets if present (no printing)
+# Merge Streamlit Cloud secrets (no prints/logs)
 if "DATABASE_URL" in st.secrets and not os.getenv("DATABASE_URL"):
     os.environ["DATABASE_URL"] = str(st.secrets["DATABASE_URL"]).strip()
 
-# Normalize: ensure sslmode=require (without duplicating)
+# Normalize: ensure sslmode=require (don’t duplicate)
 _db = os.getenv("DATABASE_URL", "").strip()
 if _db and "sslmode=" not in _db:
     os.environ["DATABASE_URL"] = f"{_db}{'&' if '?' in _db else '?'}sslmode=require"
@@ -56,16 +83,6 @@ from zawadi_db import (
     delete_special_requests,
     delete_special,
 )
-
-# Hide Default Streamlit Elements
-hide_streamlit_style = """
-    <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
-    </style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # ---------------------------------------------
 # Constants
