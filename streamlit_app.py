@@ -992,14 +992,45 @@ def expense_tracker(data):
         filtered_expenses = filtered_expenses[filtered_expenses['Category'] == category_filter]
 
     if st.session_state.get('treasurer_authenticated', False):
-        filtered_expenses['Phone'] = filtered_expenses['Phone'].astype(str)
+        # --- Ensure required columns exist with safe defaults ---
+        required_cols = ["Date","Description","Category","Vendor","Phone","Amount (KES)","Mode","Remarks"]
+        for c in required_cols:
+            if c not in filtered_expenses.columns:
+                # sensible default types
+                filtered_expenses[c] = 0.0 if c == "Amount (KES)" else ""
+
+        # --- Coerce dtypes to what data_editor expects ---
+        # Amount must be numeric
+        filtered_expenses["Amount (KES)"] = pd.to_numeric(filtered_expenses["Amount (KES)"], errors="coerce").fillna(0.0).astype(float)
+
+        # Date as string (we’re displaying editable text "YYYY-MM-DD")
+        # If it's already datetime, format it; otherwise keep as-is string
+        if pd.api.types.is_datetime64_any_dtype(filtered_expenses["Date"]):
+            filtered_expenses["Date"] = filtered_expenses["Date"].dt.strftime("%Y-%m-%d")
+        else:
+            filtered_expenses["Date"] = filtered_expenses["Date"].astype(str).str.strip()
+
+        # Category as string and restricted to our known options
+        filtered_expenses["Category"] = filtered_expenses["Category"].astype(str).str.strip()
+        filtered_expenses.loc[~filtered_expenses["Category"].isin(EXPENSE_CATEGORIES), "Category"] = "Miscellaneous"
+
+        # Phone as string (to keep leading zeros, plus signs, etc.)
+        filtered_expenses["Phone"] = filtered_expenses["Phone"].astype(str)
+
+        # Mode as string
+        filtered_expenses["Mode"] = filtered_expenses["Mode"].astype(str)
+
         st.data_editor(
             filtered_expenses,
             column_config={
-                "Amount (KES)": st.column_config.NumberColumn("Amount (KES)", format="%d", min_value=0),
                 "Date": st.column_config.TextColumn("Date (YYYY-MM-DD)"),
+                "Description": st.column_config.TextColumn("Description"),
                 "Category": st.column_config.SelectboxColumn("Category", options=EXPENSE_CATEGORIES),
-                "Phone": st.column_config.TextColumn("Payee Phone")
+                "Vendor": st.column_config.TextColumn("Vendor"),
+                "Phone": st.column_config.TextColumn("Payee Phone"),
+                "Amount (KES)": st.column_config.NumberColumn("Amount (KES)", format="%d", min_value=0),
+                "Mode": st.column_config.SelectboxColumn("Payment Mode", options=["Cash","MPesa","Bank Transfer"]),
+                "Remarks": st.column_config.TextColumn("Remarks"),
             },
             use_container_width=True,
             num_rows="dynamic",
